@@ -18,6 +18,9 @@ env/
 # Environment variables (contains API keys)
 .env
 
+# Agent internal notes (not for public repo)
+agentlog.md
+
 # Linting / type checking / testing
 .mypy_cache/
 .ruff_cache/
@@ -30,6 +33,7 @@ coverage.xml
 serenity-report/
 buildtest*/
 teste-*/
+tet*/
 screenshots/
 *.pdf
 
