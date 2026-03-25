@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logosyoff.png" alt="Serenity QA" width="120">
+  <img src="logosyoff.png" alt="Serenity QA" width="400">
 </p>
 
 <h1 align="center">SERENITY QA</h1>
@@ -156,8 +156,8 @@ Score de **0 a 100** com pesos por dominio:
 | Performance | 25% |
 | SEO | 20% |
 | Funcionalidade + Clicador | 20% |
-| Responsividade | 15% |
-| Acessibilidade | 10% |
+| Responsividade | 20% |
+| Acessibilidade | 5% |
 | Infraestrutura | 10% |
 
 | Score | Veredicto |

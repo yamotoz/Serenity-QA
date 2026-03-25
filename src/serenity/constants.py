@@ -40,8 +40,8 @@ DOMAIN_WEIGHTS: dict[str, float] = {
     "seo": 0.20,
     "functionality": 0.10,
     "click_agent": 0.10,
-    "responsiveness": 0.15,
-    "accessibility": 0.10,
+    "responsiveness": 0.20,
+    "accessibility": 0.05,
     "infrastructure": 0.10,
 }
 
