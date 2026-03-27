@@ -1,0 +1,24 @@
+# Serenity QA — Dependencies
+# Python >= 3.12
+
+# Core
+playwright>=1.50
+fastapi>=0.115
+uvicorn[standard]>=0.32
+httpx>=0.27
+pydantic>=2.9
+python-dotenv>=1.0
+
+# CLI & Reporting
+rich>=13.9
+jinja2>=3.1
+weasyprint>=62
+pillow>=11
+
+# AI
+google-generativeai>=0.8
+
+# Security & Network
+certifi>=2024
+cryptography>=43
+websockets>=13

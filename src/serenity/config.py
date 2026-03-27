@@ -34,6 +34,7 @@ class ScanConfig(BaseModel):
     enable_advanced: bool = True
     enable_ai: bool = True
     headless: bool = True
+    json_only: bool = False  # --json mode: single JSON output, no extra files
 
     # Dashboard
     dashboard_host: str = DASHBOARD_HOST

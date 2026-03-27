@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import logging
 import os
+import subprocess
 import sys
 import time
 
@@ -21,6 +22,8 @@ if sys.platform == "win32":
 from rich.console import Console
 from rich.text import Text
 from rich.style import Style
+
+from pathlib import Path
 
 from serenity import __version__
 from serenity.config import ScanConfig
@@ -104,9 +107,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--upgrade",
+        action="store_true",
+        help="Update Serenity QA to the latest version (git pull + pip install)",
+    )
+
+    parser.add_argument(
         "--url",
-        required=True,
+        default=None,
         help="Target URL to analyze",
+    )
+
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="json_only",
+        help="Output a single consolidated JSON to stdout (API mode, no extra files)",
     )
 
     parser.add_argument(
@@ -202,23 +218,107 @@ def setup_logging(verbosity: int) -> None:
     )
 
 
+def _run_upgrade() -> None:
+    """Update Serenity QA: git pull + pip install -r requirements.txt."""
+    repo_root = Path(__file__).resolve().parent.parent.parent  # src/serenity -> repo root
+
+    console.print("[bold gold1]> Serenity QA -- Upgrade[/bold gold1]\n")
+
+    # Step 1: git pull
+    console.print("  [dim]Pulling latest changes...[/dim]")
+    try:
+        result = subprocess.run(
+            ["git", "pull", "--ff-only"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode == 0:
+            console.print(f"  [green][OK][/green] {result.stdout.strip()}")
+        else:
+            console.print(f"  [red][FAIL][/red] git pull failed:\n{result.stderr.strip()}")
+            sys.exit(1)
+    except FileNotFoundError:
+        console.print("  [red][FAIL][/red] git not found. Make sure git is installed.")
+        sys.exit(1)
+
+    # Step 2: pip install
+    console.print("  [dim]Installing dependencies...[/dim]")
+    req_file = repo_root / "requirements.txt"
+    if req_file.exists():
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-r", str(req_file), "-q"],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if result.returncode == 0:
+            console.print("  [green][OK][/green] Dependencies up to date")
+        else:
+            console.print(f"  [yellow][WARN][/yellow] pip install issues:\n{result.stderr.strip()}")
+    else:
+        console.print("  [dim]No requirements.txt found, skipping pip install[/dim]")
+
+    # Step 3: playwright install (browsers)
+    console.print("  [dim]Checking Playwright browsers...[/dim]")
+    result = subprocess.run(
+        [sys.executable, "-m", "playwright", "install", "chromium"],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    if result.returncode == 0:
+        console.print("  [green][OK][/green] Playwright browsers ready")
+    else:
+        console.print("  [yellow][WARN][/yellow] Playwright browser install issue")
+
+    console.print("\n[bold green]Upgrade complete![/bold green]")
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
-    # Animated startup banner
-    _show_startup_animation()
+    # --upgrade: update and exit
+    if args.upgrade:
+        _run_upgrade()
+        sys.exit(0)
+
+    # --url is required for scanning
+    if not args.url:
+        parser.error("--url is required (unless using --upgrade)")
+
+    # Animated startup banner (skip in json-only mode for clean output)
+    if not args.json_only:
+        _show_startup_animation()
 
     # Logging
     setup_logging(args.verbose)
 
+    # In --json mode, force json-only format and suppress console output
+    if args.json_only:
+        args.format = "json"
+
     # Build config and engine
     config = ScanConfig.from_args(args)
+
+    # Override for --json mode: only JSON report
+    if args.json_only:
+        config.report_formats = ["json"]
+        config.json_only = True
+
     engine = Engine()
 
     # Run scan
     try:
         result = asyncio.run(engine.run_scan(config))
+
+        # In --json mode, read the generated JSON and print to stdout
+        if args.json_only and "json" in result.report_paths:
+            json_path = Path(result.report_paths["json"])
+            print(json_path.read_text(encoding="utf-8"))
+
         sys.exit(0 if result.verdict.value != "REPROVADO" else 1)
     except KeyboardInterrupt:
         console.print("\n[yellow]Scan interrupted by user.[/yellow]")

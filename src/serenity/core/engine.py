@@ -30,7 +30,7 @@ from serenity.exceptions import AnalyzerError, SerenityError
 from serenity.scoring.engine import ScoringEngine
 
 logger = logging.getLogger("serenity.engine")
-console = Console(force_terminal=True)
+console = Console(force_terminal=True, stderr=True)
 
 # Timeout in seconds for each advanced module execution
 _ADVANCED_MODULE_TIMEOUT = 120
@@ -257,7 +257,8 @@ class Engine:
             verdict = self._scoring.get_verdict(final_scores["overall"])
 
             # --- Phase 7: Generate reports ------------------------------
-            console.print("\n[bold sea_green2]> Phase 6:[/bold sea_green2] Generating reports...")
+            if not ctx.config.json_only:
+                console.print("\n[bold sea_green2]> Phase 6:[/bold sea_green2] Generating reports...")
             report_paths = await self._generate_reports(ctx, final_scores, verdict)
 
             # --- Done ---------------------------------------------------
@@ -267,7 +268,8 @@ class Engine:
                 "report_paths": report_paths,
             })
 
-            self._print_summary(final_scores, verdict, state, report_paths)
+            if not ctx.config.json_only:
+                self._print_summary(final_scores, verdict, state, report_paths)
 
             return ScanResult(
                 overall_score=final_scores["overall"],
@@ -438,15 +440,22 @@ class Engine:
         """Generate all report formats."""
         paths: dict[str, str] = {}
         output = ctx.config.get_output_path()
+        quiet = ctx.config.json_only
 
+        # JSON report (always generated when in formats)
         try:
             from serenity.reporting.json_report import generate_json_report
             if "json" in ctx.config.report_formats:
                 json_path = await generate_json_report(ctx, scores, verdict, output)
                 paths["json"] = str(json_path)
-                console.print(f"  [green][OK][/green] JSON report: [dim]{json_path}[/dim]")
+                if not quiet:
+                    console.print(f"  [green][OK][/green] JSON report: [dim]{json_path}[/dim]")
         except Exception as e:
             logger.error("JSON report generation failed: %s", e)
+
+        # In --json mode, only generate the JSON — skip everything else
+        if quiet:
+            return paths
 
         try:
             from serenity.reporting.html_report import generate_html_report
