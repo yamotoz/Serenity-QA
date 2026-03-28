@@ -62,10 +62,12 @@ class ScanConfig(BaseModel):
         if fmt != "all":
             formats = [fmt]
 
-        # -o takes priority over --output-dir
+        # -o saves inside Scans/ folder, --output-dir uses custom path
         output = getattr(args, "output", None)
         if output:
-            output_dir = f"./{output}"
+            # Resolve relative to the repo root (where Serenity.py lives)
+            repo_root = Path(__file__).resolve().parent.parent.parent
+            output_dir = str(repo_root / "Scans" / output)
         else:
             output_dir = getattr(args, "output_dir", "./serenity-report")
 
