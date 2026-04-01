@@ -1,1 +1,0 @@
-"""Serenity QA core infrastructure."""
